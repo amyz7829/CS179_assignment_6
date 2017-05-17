@@ -162,9 +162,9 @@ int main(int argc, char* argv[]) {
     As an initial condition at time 0, zero out your memory as well. */
     float *dev_data;
 
-    gpuErrchk(cudaMalloc((void **)&dev_data, sizeof(float) * numberOfNodes * 3));
+    cudaMalloc((void **)&dev_data, sizeof(float) * numberOfNodes * 3);
 
-    gpuErrchk(cudaMemset(dev_data, 0, sizeof(float) * numberOfNodes * 3));
+    cudaMemset(dev_data, 0, sizeof(float) * numberOfNodes * 3);
 
     // Looping through all times t = 0, ..., t_max
     for (size_t timestepIndex = 0; timestepIndex < numberOfTimesteps;
@@ -178,9 +178,9 @@ int main(int argc, char* argv[]) {
         /* TODO: Call a kernel to solve the problem (you'll need to make
         the kernel in the .cu file) */
         cudaCallDisplacementKernel(blocks, threadsPerBlock,
-          dev_data[(timestepIndex - 1) % 3 * numberOfNodes],
-          dev_data[(timestepIndex) % 3 * numberOfNodes],
-          dev_data[(timestepIndex + 1) % 3 * numberOfNodes], numberOfNodes, courant);
+          dev_data + (timestepIndex - 1) % 3 * numberOfNodes,
+          dev_data + (timestepIndex) % 3 * numberOfNodes,
+          dev_data + (timestepIndex + 1) % 3 * numberOfNodes, numberOfNodes, courant);
 
         //Left boundary condition on the CPU - a sum of sine waves
         const float t = timestepIndex * dt;
@@ -195,9 +195,9 @@ int main(int argc, char* argv[]) {
         /* TODO: Apply left and right boundary conditions on the GPU.
         The right boundary conditon will be 0 at the last position
         for all times t */
-        cudaMemset(dev_data[(timestepIndex + 1) % 3 * numberOfNodes], left_boundary_value, sizeof(float));
+        cudaMemset(dev_data + (timestepIndex + 1) % 3 * numberOfNodes, left_boundary_value, sizeof(float));
 
-        cudaMemset(dev_data[(timestepIndex + 1) % 3 * numberOfNodes + (numberOfNodes - 1)], 0, sizeof(float));
+        cudaMemset(dev_data + (timestepIndex + 1) % 3 * numberOfNodes + (numberOfNodes - 1), 0, sizeof(float));
         // Check if we need to write a file
         if (CUDATEST_WRITE_ENABLED == true && numberOfOutputFiles > 0 &&
                 (timestepIndex+1) % (numberOfTimesteps / numberOfOutputFiles)
