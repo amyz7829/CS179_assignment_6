@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
 
 
             /* TODO: Copy data from GPU back to the CPU in file_output */
-            cudaMemcpy(file_output, data[(timestepIndex + 1) % 3 * numberOfNodes], sizeof(float) * numberOfNodes, cudaMemcpyDeviceToHost);
+            cudaMemcpy(file_output, dev_data + (timestepIndex + 1) % 3 * numberOfNodes, sizeof(float) * numberOfNodes, cudaMemcpyDeviceToHost);
             printf("writing an output file\n");
             // make a filename
             char filename[500];
