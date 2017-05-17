@@ -12,6 +12,7 @@
 
 /* TODO: You'll need a kernel here, as well as any helper functions
 to call it */
+__global__
 void cudaDisplacementKernel(const float *old_d, const float *current_d, float *new_d, float size, float courant){
   int tid = threadIdx.x;
   int idx = blockIdx.x * blockDim.x + tid;
