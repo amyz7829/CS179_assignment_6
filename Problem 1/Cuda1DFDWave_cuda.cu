@@ -22,6 +22,6 @@ void cudaDisplacementKernel(const float *old_d, const float *current_d, float *n
 }
 
 void cudaCallDisplacementKernel(const unsigned int blocks, const unsigned int threadsPerBlock,
-  const float *old_d, const float *current_d, float *new_d, float size float courant){
+  const float *old_d, const float *current_d, float *new_d, float size, float courant){
   cudaDisplacementKernel<<<blocks, threadsPerBlock>>>(old_d, current_d, new_d, courant);
 }
