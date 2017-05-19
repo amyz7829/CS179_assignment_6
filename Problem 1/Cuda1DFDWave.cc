@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
         for all times t */
         cudaMemcpy(dev_data + (timestepIndex + 1) % 3 * numberOfNodes, left_boundary_value, sizeof(float), cudaMemcpyHostToDevice);
 
-        cudaMemcpy(dev_data + (timestepIndex + 1) % 3 * numberOfNodes + (numberOfNodes - 1), 0, sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemset(dev_data + (timestepIndex + 1) % 3 * numberOfNodes + (numberOfNodes - 1), 0, sizeof(float));
         // Check if we need to write a file
         if (CUDATEST_WRITE_ENABLED == true && numberOfOutputFiles > 0 &&
                 (timestepIndex+1) % (numberOfTimesteps / numberOfOutputFiles)
