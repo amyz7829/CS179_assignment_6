@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
         cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost);
 
     } while (simComplete != 0);
-
+    std::cout<<"Out of loop"<<std::endl;
     /* Gather the results. */
       gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
       gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(float)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
