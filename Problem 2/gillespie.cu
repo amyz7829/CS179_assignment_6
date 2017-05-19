@@ -126,7 +126,7 @@ void gillespieAccumulateMeans(int * standard_concentrations, float *means, int n
 
 // TODO: 2.3b    Calculation of system varience (10 pts)
 __global__
-void gillespieAccumulateVariances()
+void gillespieAccumulateVariances(int *standard_concentrations, float *variances, float *means, int num_timesteps, int size)
 {
   unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int block_idx = blockIdx.x;
@@ -185,6 +185,9 @@ int main(int argc, char *argv[])
     float *dev_d_timesteps;
     float *dev_uniform_samples;
 
+    float *dev_means;
+    float *dev_variances;
+
     /* Allocate memory on the GPU. */
     cudaMalloc((void **)&d_simComplete, sizeof(int));
 
@@ -198,6 +201,9 @@ int main(int argc, char *argv[])
     cudaMalloc((void **)&dev_d_timesteps, sizeof(float) * nThreads);
     // All 0th values are idx, 1st values are 1 * 1000 + idx, etc..
     cudaMalloc((void **)&dev_uniform_samples, sizeof(int) *  4 * nThreads * 1000);
+
+    cudaMalloc((void **)&dev_means, sizeof(float) * 1000);
+    cudaMalloc((void **)&dev_variances, sizeof(float) * 1000);
 
     cudaMemset(dev_times, 0, sizeof(float) * 4 * nThreads);
     cudaMemset(dev_states, 0, sizeof(int) * 4 * nThreads);
@@ -230,8 +236,8 @@ int main(int argc, char *argv[])
     } while (simComplete == false);
 
     /* Gather the results. */
-      gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>();
-      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(int)>>>();
+      gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
+      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
 
 
     /* Free memory */
