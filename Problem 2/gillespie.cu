@@ -241,4 +241,15 @@ int main(int argc, char *argv[])
 
 
     /* Free memory */
+    curandDestroyGenerator(gen);
+    cudaFree(d_simComplete);
+    cudaFree(dev_times);
+    cudaFree(dev_states);
+    cudaFree(dev_concentrations);
+    cudaFree(dev_random_timesteps);
+    cudaFree(dev_uniform_samples);
+    cudaFree(dev_d_timesteps);
+    cudaFree(dev_random_transitions);
+    cudaFree(dev_means);
+    cudaFree(dev_variances);
 }
