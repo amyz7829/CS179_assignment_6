@@ -93,7 +93,7 @@ void gillespieResampleKernel(float *times, int *states, int *concentrations, flo
           states[idx] = 2;
         }
         else{
-          *completed = 0;
+          *completed = 1;
         }
       }
     }
@@ -227,13 +227,13 @@ int main(int argc, char *argv[])
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, num_simulations);
         std::cout<<"completed timestep kernel"<<std::endl;
         /* Accumulate the results of the timestep. */
-        gpuErrchk(cudaMemset(d_simComplete, 1, sizeof(int)));
+        gpuErrchk(cudaMemset(d_simComplete, 0, sizeof(int)));
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, num_simulations);
         std::cout<<"completed resample kernel"<<std::endl;
         /* Check if stopping condition has been reached. */
         gpuErrchk(cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost));
 
-    } while (simComplete == 0);
+    } while (simComplete != 0);
     std::cout<<"Out of loop"<<std::endl;
     /* Gather the results. */
       gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, num_simulations);
