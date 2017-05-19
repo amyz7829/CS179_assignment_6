@@ -104,19 +104,19 @@ void gillespieAccumulateMeans(int * standard_concentrations, float *means, int n
 {
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int block_idx = blockIdx.x;
-    extern __shared__ int data[];
+    extern __shared__ int sums[];
 
     data[idx] = 0;
     while(block_idx < num_timesteps){
       while(idx < size){
-        data[threadIdx.x] += standard_concentrations[block_idx * 1000 + idx];
+        sums[threadIdx.x] += standard_concentrations[block_idx * 1000 + idx];
         idx += gridDim.x * blockDim.x;
       }
       __syncthreads();
       if(threadIdx.x == 0){
-        int sum = data[threadIdx.x];
+        int sum = sums[threadIdx.x];
         for(unsigned int i = 1; i < blockDim.x; i++){
-          sum += data[i];
+          sum += sums[i];
         }
         atomicAdd(&means[block_idx], (float)sum / num_timesteps);
         block_idx += gridDim.x;
@@ -130,19 +130,19 @@ void gillespieAccumulateVariances(int *standard_concentrations, float *variances
 {
   unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int block_idx = blockIdx.x;
-  extern __shared__ float data[];
+  extern __shared__ float var_sums[];
 
   data[idx] = 0;
   while(block_idx < num_timesteps){
     while(idx < size){
-      data[threadIdx.x] += powf(means[block_idx] - standard_concentrations[block_idx * 1000 + idx], 2);
+      var_sums[threadIdx.x] += powf(means[block_idx] - standard_concentrations[block_idx * 1000 + idx], 2);
       idx += gridDim.x * blockDim.x;
     }
     __syncthreads();
     if(threadIdx.x == 0){
-      int sum = data[threadIdx.x];
+      int sum = var_sums[threadIdx.x];
       for(unsigned int i = 1; i < blockDim.x; i++){
-        sum += data[i];
+        sum += var_sums[i];
       }
       atomicAdd(&variances[block_idx], (float)sum / num_timesteps);
       block_idx += gridDim.x;
