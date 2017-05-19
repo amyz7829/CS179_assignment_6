@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
         /* Check if stopping condition has been reached. */
         cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost);
 
-    } while (simComplete == false);
+    } while (simComplete != 0);
 
     /* Gather the results. */
       gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
