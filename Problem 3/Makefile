@@ -15,15 +15,15 @@ NVCC            ?= $(CUDA_BIN_PATH)/nvcc
 
 # OS-specific build flags
 ifeq ($(shell uname),Darwin)
-        LDFLAGS       := -Xlinker -rpath $(CUDA_LIB_PATH) -L$(CUDA_LIB_PATH) -lcudart -lcufft
+        LDFLAGS       := -Xlinker -rpath $(CUDA_LIB_PATH) -L$(CUDA_LIB_PATH) -lcudart -lcufft -lcurand
         CCFLAGS           := -arch $(OS_ARCH)
 else
         ifeq ($(OS_SIZE),32)
-                LDFLAGS   := -L$(CUDA_LIB_PATH) -lcufft -lcudart
+                LDFLAGS   := -L$(CUDA_LIB_PATH) -lcufft -lcudart -lcurand
                 CCFLAGS   := -m32
         else
                 CUDA_LIB_PATH := $(CUDA_LIB_PATH)64
-                LDFLAGS       := -L$(CUDA_LIB_PATH) -lcufft -lcudart
+                LDFLAGS       := -L$(CUDA_LIB_PATH) -lcufft -lcudart -lcurand
                 CCFLAGS       := -m64
         endif
 endif
@@ -31,16 +31,16 @@ endif
 
 # OS-architecture specific flags
 ifeq ($(OS_SIZE),32)
-      NVCCFLAGS := -m32 -lcufft
+      NVCCFLAGS := -m32 -lcufft -lcurand
 else
-      NVCCFLAGS := -m64 -lcufft
+      NVCCFLAGS := -m64 -lcufft -lcurand
 endif
 
 TARGETS = cardiac_twitch
 
 all: $(TARGETS)
 
-cardiac_twitch: ta_utilities.cpp transition_matrix.cpp cardiac_twitch.o 
+cardiac_twitch: ta_utilities.cpp transition_matrix.cpp cardiac_twitch.o
 	$(CC) $^ -o $@ -O3 $(LDFLAGS) -Wall -I$(CUDA_INC_PATH)
 
 cardiac_twitch.o: cardiac_twitch.cu
