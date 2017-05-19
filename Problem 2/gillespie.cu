@@ -217,8 +217,8 @@ int main(int argc, char *argv[])
     /* Loop over each timestep in the simulation. */
     do {
         /* Generate random numbers for the simulation. */
-        cudaGenerateUniform(gen, dev_random_transitions, nThreads);
-        cudaGenerateUniform(gen, dev_random_timesteps, nThreads);
+        curandGenerateUniform(gen, dev_random_transitions, nThreads);
+        curandGenerateUniform(gen, dev_random_timesteps, nThreads);
 
         /* Execute a single timestep in the Gillespie simulation. */
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, 4 * nThreads);
