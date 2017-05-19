@@ -106,7 +106,7 @@ void gillespieAccumulateMeans(int * standard_concentrations, float *means, int n
     unsigned int block_idx = blockIdx.x;
     extern __shared__ int sums[];
 
-    data[idx] = 0;
+    sums[idx] = 0;
     while(block_idx < num_timesteps){
       while(idx < size){
         sums[threadIdx.x] += standard_concentrations[block_idx * 1000 + idx];
@@ -132,7 +132,7 @@ void gillespieAccumulateVariances(int *standard_concentrations, float *variances
   unsigned int block_idx = blockIdx.x;
   extern __shared__ float var_sums[];
 
-  data[idx] = 0;
+  var_sums[idx] = 0;
   while(block_idx < num_timesteps){
     while(idx < size){
       var_sums[threadIdx.x] += powf(means[block_idx] - standard_concentrations[block_idx * 1000 + idx], 2);
