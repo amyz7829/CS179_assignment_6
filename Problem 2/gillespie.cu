@@ -8,7 +8,7 @@
 #define G         1.0
 #define KON       0.1
 #define KOFF      0.9
-struct
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
