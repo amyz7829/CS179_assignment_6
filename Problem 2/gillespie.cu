@@ -195,8 +195,8 @@ int main(int argc, char *argv[])
     cudaMalloc((void **)&dev_random_timesteps, sizeof(float) * 4 * nThreads);
     cudaMalloc((void **)&dev_random_transitions, sizeof(float) * 4 * nThreads);
 
-    cudaMalloc((void **)&dev_times, sizeof(float) * nThreads);
-    cudaMalloc((void **)&dev_states, sizeof(int) * nThreads);
+    cudaMalloc((void **)&dev_times, sizeof(float) * 4 * nThreads);
+    cudaMalloc((void **)&dev_states, sizeof(int) * 4 * nThreads);
     cudaMalloc((void **)&dev_concentrations, sizeof(int) * 4  * nThreads);
 
     cudaMalloc((void **)&dev_d_timesteps, sizeof(float) * nThreads);
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, 4 * nThreads);
 
         /* Haven't completed yet. */
-        gpuErrchk( cudaMemset(d_simComplete, 0, sizeof(int)) );
+        gpuErrchk( cudaMemset(d_simComplete, 0, sizeof(int)));
 
         /* Accumulate the results of the timestep. */
         cudaMemset(d_simComplete, 1, sizeof(int));
