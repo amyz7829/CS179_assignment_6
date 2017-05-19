@@ -21,7 +21,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 enum state : int{
   OFF = 0, ON = 1, DONE = 2
-}
+};
 
 // TODO: 2.1     Gillespie timestep implementation (25 pts)
 // Given an array of random numbers, want to determine propensities
@@ -62,7 +62,7 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
           }
           else if(rand_transitions[idx] < (.9 + 10) / total_propensities){
             concentrations[idx] = concentrations[idx] + 1;
-            timestep = log_x / total_propensities
+            timestep = log_x / total_propensities;
           }
           else{
             concentrations[idx] = concentrations[idx] - 1;
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
     cudaMalloc((void **)&dev_random_transitions, sizeof(float) * 4 * nThreads);
 
     cudaMalloc((void **)&dev_times, sizeof(float) * nThreads);
-    cudaMalloc((void **)&dev_states, sizeof(int) * nTheads);
+    cudaMalloc((void **)&dev_states, sizeof(int) * nThreads);
     cudaMalloc((void **)&dev_concentrations, sizeof(int) * 4  * nThreads);
 
     cudaMalloc((void **)&dev_d_timesteps, sizeof(float) * nThreads);
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 
     /* Gather the results. */
       gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
-      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
+      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(float)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
 
 
     /* Free memory */
