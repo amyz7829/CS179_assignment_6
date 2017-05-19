@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
       cudaMemcpy(variance, dev_variances, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
       for(int i = 0; i < 1000; i++){
         std::cout<<"Mean: "<<means[i]<<std::endl;
-        std::cout<<"Variance: "<<variance[i]<<std::endl;
+        std::cout<<"Variance: "<<variances[i]<<std::endl;
       }
 
     /* Free memory */
