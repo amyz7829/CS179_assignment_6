@@ -77,7 +77,7 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
 
 // TODO: 2.2     Data resampling and stopping condition (25 pts)
 __global__
-void gillespieResampleKernel(float *times, float *states, int *concentrations, float *d_timesteps, int *standard_concentrations, int * completed, int size)
+void gillespieResampleKernel(float *times, int *states, int *concentrations, float *d_timesteps, int *standard_concentrations, int * completed, int size)
 {
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     while(idx < size){
