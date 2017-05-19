@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
       float means[1000];
       float variances[1000];
       cudaMemcpy(means, dev_means, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
-      cudaMemcpy(variance, dev_variances, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
+      cudaMemcpy(variances, dev_variances, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
       for(int i = 0; i < 1000; i++){
         std::cout<<"Mean: "<<means[i]<<std::endl;
         std::cout<<"Variance: "<<variances[i]<<std::endl;
