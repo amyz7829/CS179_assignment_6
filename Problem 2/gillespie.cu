@@ -176,6 +176,8 @@ int main(int argc, char *argv[])
     int simComplete;
     int *d_simComplete;
 
+    int num_simulations = 4000;
+
     float *dev_random_timesteps;
     float *dev_random_transitions;
 
@@ -192,24 +194,24 @@ int main(int argc, char *argv[])
     /* Allocate memory on the GPU. */
     cudaMalloc((void **)&d_simComplete, sizeof(int));
 
-    cudaMalloc((void **)&dev_random_timesteps, sizeof(float) * 4 * nThreads);
-    cudaMalloc((void **)&dev_random_transitions, sizeof(float) * 4 * nThreads);
+    cudaMalloc((void **)&dev_random_timesteps, sizeof(float) * num_simulations);
+    cudaMalloc((void **)&dev_random_transitions, sizeof(float) * num_simulations);
 
-    cudaMalloc((void **)&dev_times, sizeof(float) * 4 * nThreads);
-    cudaMalloc((void **)&dev_states, sizeof(int) * 4 * nThreads);
-    cudaMalloc((void **)&dev_concentrations, sizeof(int) * 4  * nThreads);
+    cudaMalloc((void **)&dev_times, sizeof(float) * num_simulations);
+    cudaMalloc((void **)&dev_states, sizeof(int) * num_simulations);
+    cudaMalloc((void **)&dev_concentrations, sizeof(int) * num_simulations);
 
     cudaMalloc((void **)&dev_d_timesteps, sizeof(float) * nThreads);
     // All 0th values are idx, 1st values are 1 * 1000 + idx, etc..
-    cudaMalloc((void **)&dev_uniform_samples, sizeof(int) *  4 * nThreads * 1000);
+    cudaMalloc((void **)&dev_uniform_samples, sizeof(int) *  num_simulations * 1000);
 
     cudaMalloc((void **)&dev_means, sizeof(float) * 1000);
     cudaMalloc((void **)&dev_variances, sizeof(float) * 1000);
 
-    cudaMemset(dev_times, 0, sizeof(float) * 4 * nThreads);
-    cudaMemset(dev_states, 0, sizeof(int) * 4 * nThreads);
-    cudaMemset(dev_concentrations, 0, sizeof(int) * 4 * nThreads);
-    cudaMemset(dev_uniform_samples, 0, sizeof(int) *  4 * nThreads);
+    cudaMemset(dev_times, 0, sizeof(float) * num_simulations);
+    cudaMemset(dev_states, 0, sizeof(int) * num_simulations);
+    cudaMemset(dev_concentrations, 0, sizeof(int) * num_simulations);
+    cudaMemset(dev_uniform_samples, 0, sizeof(int) *  num_simulations);
 
     /* Perform initialization */
     curandGenerator_t gen;
@@ -222,11 +224,11 @@ int main(int argc, char *argv[])
         curandGenerateUniform(gen, dev_random_timesteps, nThreads  * 4);
         std::cout<<"loop"<<std::endl;
         /* Execute a single timestep in the Gillespie simulation. */
-        gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, 4 * nThreads);
+        gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, num_simulations);
         std::cout<<"completed timestep kernel"<<std::endl;
         /* Accumulate the results of the timestep. */
         gpuErrchk(cudaMemset(d_simComplete, 1, sizeof(int)));
-        gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, 4 * nThreads);
+        gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, num_simulations);
         std::cout<<"completed resample kernel"<<std::endl;
         /* Check if stopping condition has been reached. */
         cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost);
@@ -234,8 +236,8 @@ int main(int argc, char *argv[])
     } while (simComplete != 0);
     std::cout<<"Out of loop"<<std::endl;
     /* Gather the results. */
-      gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
-      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(float)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
+      gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, num_simulations);
+      gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(float)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, num_simulations);
 
       float means[1000];
       float variances[1000];
