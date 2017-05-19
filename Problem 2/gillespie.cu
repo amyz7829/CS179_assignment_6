@@ -224,11 +224,8 @@ int main(int argc, char *argv[])
         /* Execute a single timestep in the Gillespie simulation. */
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, 4 * nThreads);
 
-        /* Haven't completed yet. */
-        gpuErrchk( cudaMemset(d_simComplete, 0, sizeof(int)));
-
         /* Accumulate the results of the timestep. */
-        cudaMemset(d_simComplete, 1, sizeof(int));
+        gpuErrchk(cudaMemset(d_simComplete, 1, sizeof(int)));
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, 4 * nThreads);
 
         /* Check if stopping condition has been reached. */
