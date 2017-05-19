@@ -223,11 +223,11 @@ int main(int argc, char *argv[])
         std::cout<<"loop"<<std::endl;
         /* Execute a single timestep in the Gillespie simulation. */
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, 4 * nThreads);
-
+        std::cout<<"completed timestep kernel"<<std::endl;
         /* Accumulate the results of the timestep. */
         gpuErrchk(cudaMemset(d_simComplete, 1, sizeof(int)));
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, 4 * nThreads);
-
+        std::cout<<"completed resample kernel"<<std::endl;
         /* Check if stopping condition has been reached. */
         cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost);
 
