@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <iostream>
 #include <cuda_runtime.h>
 #include <curand.h>
 #include "ta_utilities.hpp"
@@ -239,6 +240,14 @@ int main(int argc, char *argv[])
       gillespieAccumulateMeans<<<nBlocks, nThreads, nThreads * sizeof(int)>>>(dev_uniform_samples, dev_means, 1000, 4 * nThreads);
       gillespieAccumulateVariances<<<nBlocks, nThreads, nThreads * sizeof(float)>>>(dev_uniform_samples, dev_variances, dev_means, 1000, 4 * nThreads);
 
+      float means[1000];
+      float variances[1000];
+      cudaMemcpy(means, dev_means, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
+      cudaMemcpy(variance, dev_variances, 1000 * sizeof(float), cudaMemcpyDeviceToHost);
+      for(int i = 0; i < 1000; i++){
+        std::cout<<"Mean: "<<means[i]<<std::endl;
+        std::cout<<"Variance: "<<variance[i]<<std::endl;
+      }
 
     /* Free memory */
     curandDestroyGenerator(gen);
