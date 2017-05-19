@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
     int *dev_concentrations;
 
     float *dev_d_timesteps;
-    float *dev_uniform_samples;
+    int *dev_uniform_samples;
 
     float *dev_means;
     float *dev_variances;
