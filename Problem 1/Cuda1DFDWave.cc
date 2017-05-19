@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
         /* TODO: Apply left and right boundary conditions on the GPU.
         The right boundary conditon will be 0 at the last position
         for all times t */
-        cudaMemcpy(dev_data + (timestepIndex + 1) % 3 * numberOfNodes, left_boundary_value, sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(dev_data + (timestepIndex + 1) % 3 * numberOfNodes, &left_boundary_value, sizeof(float), cudaMemcpyHostToDevice);
 
         cudaMemset(dev_data + (timestepIndex + 1) % 3 * numberOfNodes + (numberOfNodes - 1), 0, sizeof(float));
         // Check if we need to write a file
