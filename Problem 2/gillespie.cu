@@ -93,7 +93,7 @@ void gillespieResampleKernel(float *times, int *states, int *concentrations, flo
           states[idx] = 2;
         }
         else{
-          completed = false;
+          completed = 0;
         }
       }
     }
