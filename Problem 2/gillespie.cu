@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, num_simulations);
         std::cout<<"completed resample kernel"<<std::endl;
         /* Check if stopping condition has been reached. */
-        cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost);
+        gpuErrchk(cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost));
 
     } while (simComplete == 0);
     std::cout<<"Out of loop"<<std::endl;
