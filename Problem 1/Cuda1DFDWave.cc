@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
         /* TODO: Call a kernel to solve the problem (you'll need to make
         the kernel in the .cu file) */
         cudaCallDisplacementKernel(blocks, threadsPerBlock,
-          dev_data + (timestepIndex - 1) % 3 * numberOfNodes,
+          dev_data + (timestepIndex - 1 + 3) % 3 * numberOfNodes,
           dev_data + (timestepIndex) % 3 * numberOfNodes,
           dev_data + (timestepIndex + 1) % 3 * numberOfNodes, numberOfNodes, courant);
 
