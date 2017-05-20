@@ -131,7 +131,7 @@ int main()
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
       float h_F_array [deviceCount][iterations];
-      
+
       // Sizes of vectors. For any element at index i in the force vector, that element represents
       // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
       size_t sizeF = iterations * sizeof(float);
@@ -157,7 +157,7 @@ int main()
         // Execute the simulation
         mcmc<<<num_blocks, blockSize>>>(d_TM, d_F, iterations, reps_per_device);
         //Copy back into the CPU array holding the h_F array results
-        gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF));
+        gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF, cudaMemcpyDeviceToHost));
 
         // Release memory
         cudaFree(d_F);
@@ -177,8 +177,11 @@ int main()
       cudaSetDevice(0);
       float *d_F_total;
       gpuErrchk( cudaMalloc(&d_F_total, sizeF));
-      gpuErrchk( cudaMemcpy(d_F_total, h_F, sizeF));
-      cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
+      gpuErrchk( cudaMemcpy(d_F_total, h_F, sizeF, cudaMemcpyHostToDevice));
+
+      float normalization_constant = reps * (NUM_RUS - 2);
+      
+      cuda_div<<<num_blocks, blockSize>>>(d_F_total, normalization_constant, iterations);
 
       // Copy array back to host
       gpuErrchk( cudaMemcpy(h_F, d_F_total, sizeF, cudaMemcpyDeviceToHost) );
