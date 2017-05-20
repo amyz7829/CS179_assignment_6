@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__);}
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
    if (code != cudaSuccess)
@@ -177,7 +177,7 @@ int main()
       cudaSetDevice(0);
       float *d_F_total;
       gpuErrchk( cudaMalloc(&d_F_total, sizeF));
-      gpuErrchk( cudaMemcpy(d_F_total, h_F, sizeF);
+      gpuErrchk( cudaMemcpy(d_F_total, h_F, sizeF));
       cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
 
       // Copy array back to host
