@@ -10,7 +10,11 @@
 #include "cardiac_twitch.hpp"
 #include "ta_utilities.hpp"
 
-// Runtime using multiple GPUs : 6309 miliseconds
+// Runtime using multiple GPUs : 46 miliseconds
+// Theoretically, using multiple GPUs allow even more things to be done in parallel,
+// as long as everything is "reassembled" at the end. By adding streams to ensure
+// concurrency of the GPUs, we achieve a low running time.
+// However, it's wrong because I'm not getting any data back and I'm not sure why
 // Runtime using single GPU : 2145 miliseconds
 
 using namespace std;
@@ -167,6 +171,7 @@ int main()
 
         // Execute the simulation
         mcmc<<<num_blocks, blockSize, 0, streams[i]>>>(d_TM, d_F, iterations, reps_per_device);
+
         //Copy back into the CPU array holding the h_F array results
         gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF, cudaMemcpyDeviceToHost, streams[i]));
 
@@ -177,6 +182,7 @@ int main()
       for(int i = 0; i < deviceCount; i++){
         cudaStreamDestroy(streams[i]);
       }
+      
       // Now on the CPU, add up all of the d_Fs and then allocate that and memcpy it over to run cuda_div
       h_F = (float *) malloc(iterations * sizeof(float));
       memset(h_F, 0, iterations * sizeof(float));

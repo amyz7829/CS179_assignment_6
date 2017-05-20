@@ -78,7 +78,7 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
     }
 }
 
-// TODO: 2.2     Data resampling and stopping condition (25 pts)
+// TODO: 2.2 Data resampling and stopping condition (25 pts)
 __global__
 void gillespieResampleKernel(float *times, int *states, int *concentrations, float *d_timesteps, int *standard_concentrations, int * not_completed, int size)
 {
@@ -98,7 +98,7 @@ void gillespieResampleKernel(float *times, int *states, int *concentrations, flo
         }
         // Otherwise, if any simulations are still under time 100, then we are not completed, so we set not completed to true
         else{
-          *completed = 1;
+          *not_completed = 1;
         }
       }
     }
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
         /* Accumulate the results of the timestep. */
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, num_simulations);
         std::cout<<"completed resample kernel"<<std::endl;
-        
+
         /* Check if stopping condition has been reached. */
         gpuErrchk(cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost));
 
