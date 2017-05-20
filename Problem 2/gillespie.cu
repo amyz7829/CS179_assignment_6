@@ -36,11 +36,11 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
         float timestep;
         float log_x = log(rand_timesteps[idx]);
         // State is currently OFF
-        if(states[idx] == 0){
+        if(states[idx] == OFF){
           // Off -> On
           float total_propensities = .1 + concentrations[idx] * G;
           if(rand_transitions[idx] < .1 / total_propensities){
-            states[idx] = 1;
+            states[idx] = ON;
             timestep = log_x / total_propensities;
           }
           // [X] --
@@ -58,13 +58,15 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
           float total_propensities = .9 + B + concentrations[idx] * G;
           // On -> Off
           if(rand_transitions[idx] < .9 / total_propensities){
-            states[idx] = 0;
+            states[idx] = OFF;
             timestep = log_x / total_propensities;
           }
+          // [X]++
           else if(rand_transitions[idx] < (.9 + 10) / total_propensities){
             concentrations[idx] = concentrations[idx] + 1;
             timestep = log_x / total_propensities;
           }
+          // [X]--
           else{
             concentrations[idx] = concentrations[idx] - 1;
             timestep = log_x / total_propensities;
@@ -78,7 +80,7 @@ void gillespieTimestepKernel(float *times, int *states, int *concentrations, flo
 
 // TODO: 2.2     Data resampling and stopping condition (25 pts)
 __global__
-void gillespieResampleKernel(float *times, int *states, int *concentrations, float *d_timesteps, int *standard_concentrations, int * completed, int size)
+void gillespieResampleKernel(float *times, int *states, int *concentrations, float *d_timesteps, int *standard_concentrations, int * not_completed, int size)
 {
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     while(idx < size){
@@ -86,12 +88,15 @@ void gillespieResampleKernel(float *times, int *states, int *concentrations, flo
       if(states[idx] != 2){
         // Find the "starting time" for this timestep
         int i;
+        // For all timesteps we have gone through since the last resampling, set those time steps to current concentration
         for(i = (times[idx] - d_timesteps[idx]) / .1; i < times[idx] / .1; i++){
           standard_concentrations[i * 1000 + idx] = concentrations[idx];
         }
+        // If any simulations have passed the max time, set their state to DONE
         if(times[idx] > 100){
-          states[idx] = 2;
+          states[idx] = DONE;
         }
+        // Otherwise, if any simulations are still under time 100, then we are not completed, so we set not completed to true
         else{
           *completed = 1;
         }
@@ -99,7 +104,7 @@ void gillespieResampleKernel(float *times, int *states, int *concentrations, flo
     }
 }
 
-// TODO: 2.3a    Calculation of system mean (10 pts)
+// Reduction is used within a thread to accumulate the sum, and then the sum / num_timesteps is added to the total mean at that timestep
 __global__
 void gillespieAccumulateMeans(int * standard_concentrations, float *means, int num_timesteps, int size)
 {
@@ -125,7 +130,7 @@ void gillespieAccumulateMeans(int * standard_concentrations, float *means, int n
     }
 }
 
-// TODO: 2.3b    Calculation of system varience (10 pts)
+// Reduction is used within a thread to accumulate the sum of variances, and that sum / num_timesteps is added to the total variance at that timestep
 __global__
 void gillespieAccumulateVariances(int *standard_concentrations, float *variances, float *means, int num_timesteps, int size)
 {
@@ -220,16 +225,19 @@ int main(int argc, char *argv[])
     /* Loop over each timestep in the simulation. */
     do {
         /* Generate random numbers for the simulation. */
-        curandGenerateUniform(gen, dev_random_transitions, nThreads * 4);
-        curandGenerateUniform(gen, dev_random_timesteps, nThreads  * 4);
-        std::cout<<"loop"<<std::endl;
+        curandGenerateUniform(gen, dev_random_transitions, num_simulations);
+        curandGenerateUniform(gen, dev_random_timesteps, num_simulations);
+
         /* Execute a single timestep in the Gillespie simulation. */
         gillespieTimestepKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_random_transitions, dev_random_timesteps, num_simulations);
         std::cout<<"completed timestep kernel"<<std::endl;
-        /* Accumulate the results of the timestep. */
+
+        //Set not_completed variable to "false", so we can detect if we still need to iterate
         gpuErrchk(cudaMemset(d_simComplete, 0, sizeof(int)));
+        /* Accumulate the results of the timestep. */
         gillespieResampleKernel<<<nBlocks, nThreads>>>(dev_times, dev_states, dev_concentrations, dev_d_timesteps, dev_uniform_samples, d_simComplete, num_simulations);
         std::cout<<"completed resample kernel"<<std::endl;
+        
         /* Check if stopping condition has been reached. */
         gpuErrchk(cudaMemcpy(&simComplete, d_simComplete, sizeof(int), cudaMemcpyDeviceToHost));
 

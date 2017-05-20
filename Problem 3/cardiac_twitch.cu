@@ -15,7 +15,7 @@ using namespace std;
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
-   if (code != cudaSuccess) 
+   if (code != cudaSuccess)
    {
       fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
       if (abort) exit(code);
@@ -53,7 +53,7 @@ cuda_div(float *in, float scalar, int n)
 __global__ void mcmc(const float * transMatrix, float *masterForces, unsigned int iterations, unsigned int reps)
 {
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    while (globalIdx < reps) 
+    while (globalIdx < reps)
     {
         unsigned int base_index = 0;
         float r = 0.0;
@@ -61,7 +61,7 @@ __global__ void mcmc(const float * transMatrix, float *masterForces, unsigned in
         // All RUs set to initial state of 0
         unsigned int RU[NUM_RUS] = {0};
         // Variable to remember original RU state of current RU (see j loop) before it was updated
-        unsigned int original_current_state	 = 0; 
+        unsigned int original_current_state	 = 0;
         // Variable to remember original RU state of the left neighbor (see j loop) before it was updated
         unsigned int original_left_state	 = 0;
         // Initialize random number generator, seeding with globalIdx
@@ -89,7 +89,7 @@ __global__ void mcmc(const float * transMatrix, float *masterForces, unsigned in
                 // Get ready for next j iteration
                 original_left_state	 = original_current_state;
         	}
-         
+
             // Count how many of the RU states, excluding edege RUs, are in the contractile state (5)
         	for(int z = 1; z < NUM_RUS - 1; z++)
         	{
@@ -103,7 +103,7 @@ __global__ void mcmc(const float * transMatrix, float *masterForces, unsigned in
 
 }
 
-int main() 
+int main()
 {
     // These functions allow you to select the least utilized GPU
     // on your system as well as enforce a time limit on program execution.
@@ -121,52 +121,124 @@ int main()
     unsigned int reps = 4096;
 
 	// Host input vectors (transition matrix and force vector)
-	float * h_TM;	
-    float *h_F;
+	float * h_TM;
+  float *h_F;
+  int deviceCount;
 
-	// Device input vectors (transition matrix and force vector)
-    float *d_F;
-    float *d_TM;
+  cudaGetDeviceCount(&deviceCount);
+  if(deviceCount > 1){
+      // Each device should do part of the reps
+      int reps_per_device = reps / deviceCount;
+      //An array that holds all of the H_F values so that we can store all of the ones from each GPU
+      float h_F_array [deviceCount][iterations];
 
-	// Sizes of vectors. For any element at index i in the force vector, that element represents
-    // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
-    size_t sizeF = iterations * sizeof(float);
-    size_t sizeTM = transMatrixSize * sizeof(float);
+      // For each GPU, run a certain number of simulations and copy memory asynchronously to allow for concurrency
+      for(int i = 0; i < deviceCount; i++){
+        cudaSetDevice(i);
+        float *d_F;
+        float *d_TM;
 
-    // Init host vectors
-    h_F = (float*) calloc(iterations, sizeof(float));
-    h_TM = gen_transition_matrix();
+    	  // Sizes of vectors. For any element at index i in the force vector, that element represents
+        // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
+        size_t sizeF = iterations * sizeof(float);
+        size_t sizeTM = transMatrixSize * sizeof(float);
 
-    // Allocate memory for each vector on GPU
-    gpuErrchk( cudaMalloc(&d_F, sizeF) );
-	gpuErrchk( cudaMalloc(&d_TM, sizeTM) );
+        // Init host vectors
+        h_TM = gen_transition_matrix();
 
-    // Copy host vectors to device
-    gpuErrchk( cudaMemcpy( d_TM, h_TM, sizeTM, cudaMemcpyHostToDevice) );
-    gpuErrchk( cudaMemcpy( d_F, h_F, sizeF, cudaMemcpyHostToDevice) );
+        // Allocate memory for each vector on GPU
+        gpuErrchk( cudaMalloc(&d_F, sizeF) );
+    	  gpuErrchk( cudaMalloc(&d_TM, sizeTM) );
 
-    // Execute the simulation
-    mcmc<<<num_blocks, blockSize>>>(d_TM, d_F, iterations, reps);
+        // Copy host vectors to device
+        gpuErrchk( cudaMemcpyAsync( d_TM, h_TM, sizeTM, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpyAsync( d_F, h_F, sizeF, cudaMemcpyHostToDevice) );
 
-    // Average % activation across all repitions
-    float normalization_constant = reps * (NUM_RUS - 2);
-    cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
-	 
-    // Copy array back to host
-    gpuErrchk( cudaMemcpy(h_F, d_F, sizeF, cudaMemcpyDeviceToHost) );
+        // Execute the simulation
+        mcmc<<<num_blocks, blockSize>>>(d_TM, d_F, iterations, reps_per_device);
+        //Copy back into the CPU array holding the h_F array results
+        gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF));
 
-	// Release device memory
-    gpuErrchk( cudaFree(d_F) );
-    gpuErrchk( cudaFree(d_TM) );
- 
-    // Write results out to file for viewing
-    write_out(h_F, iterations);
+        // Release memory
+        cudaFree(d_F);
+        cudaFree(d_TM);
+      }
+      // Now on the CPU, add up all of the d_Fs and then allocate that and memcpy it over to run cuda_div
+      h_F = (float *) malloc(iterations * sizeof(float));
+      memset(h_F, 0, iterations * sizeof(float));
 
-    // Release host memory
-    free(h_F);
-    free(h_TM);
+      for(int i = 0; i < deviceCount; i++){
+        for(int j = 0; j < iterations; j++){
+          h_F[i] += h_F_array[i][j];
+        }
+      }
 
-    // Print time
-    printf("Total time elapsed: %ld miliseconds\n", (clock() - time1) / (CLOCKS_PER_SEC / 1000));
+      // Now on just the first GPU, run the cuda_div function
+      cudaSetDevice(0);
+      float *d_F_total;
+      gpuErrchk( cudaMalloc(&d_F_total, sizeF));
+      gpuErrchk( cudaMemcpy(d_F_total, h_F, sizeF);
+      cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
+
+      // Copy array back to host
+      gpuErrchk( cudaMemcpy(h_F, d_F, sizeF, cudaMemcpyDeviceToHost) );
+
+      // Write results out to file for viewing
+      write_out(h_F, iterations);
+
+      // Release host memory
+      free(h_F);
+      free(h_TM);
+
+      // Print time
+      printf("Total time elapsed: %ld miliseconds\n", (clock() - time1) / (CLOCKS_PER_SEC / 1000));
+
+  }
+  else{
+    // Device input vectors (transition matrix and force vector)
+      float *d_F;
+      float *d_TM;
+
+  	// Sizes of vectors. For any element at index i in the force vector, that element represents
+      // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
+      size_t sizeF = iterations * sizeof(float);
+      size_t sizeTM = transMatrixSize * sizeof(float);
+
+      // Init host vectors
+      h_F = (float*) calloc(iterations, sizeof(float));
+      h_TM = gen_transition_matrix();
+
+      // Allocate memory for each vector on GPU
+      gpuErrchk( cudaMalloc(&d_F, sizeF) );
+  	  gpuErrchk( cudaMalloc(&d_TM, sizeTM) );
+
+      // Copy host vectors to device
+      gpuErrchk( cudaMemcpy( d_TM, h_TM, sizeTM, cudaMemcpyHostToDevice) );
+      gpuErrchk( cudaMemcpy( d_F, h_F, sizeF, cudaMemcpyHostToDevice) );
+
+      // Execute the simulation
+      mcmc<<<num_blocks, blockSize>>>(d_TM, d_F, iterations, reps);
+
+      // Average % activation across all repitions
+      float normalization_constant = reps * (NUM_RUS - 2);
+      cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
+
+      // Copy array back to host
+      gpuErrchk( cudaMemcpy(h_F, d_F, sizeF, cudaMemcpyDeviceToHost) );
+
+  	// Release device memory
+      gpuErrchk( cudaFree(d_F) );
+      gpuErrchk( cudaFree(d_TM) );
+
+      // Write results out to file for viewing
+      write_out(h_F, iterations);
+
+      // Release host memory
+      free(h_F);
+      free(h_TM);
+
+      // Print time
+      printf("Total time elapsed: %ld miliseconds\n", (clock() - time1) / (CLOCKS_PER_SEC / 1000));
+  }
+
 };
-
