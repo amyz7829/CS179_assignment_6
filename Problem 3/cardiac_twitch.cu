@@ -126,7 +126,7 @@ int main()
   int deviceCount;
 
   cudaGetDeviceCount(&deviceCount);
-  if(deviceCount > 1){
+  if(deviceCount > 10){
       // Each device should do part of the reps
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
