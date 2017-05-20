@@ -10,6 +10,9 @@
 #include "cardiac_twitch.hpp"
 #include "ta_utilities.hpp"
 
+// Runtime using multiple GPUs : 6309 miliseconds
+// Runtime using single GPU : 2145 miliseconds 
+
 using namespace std;
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__);}
@@ -126,7 +129,7 @@ int main()
   int deviceCount;
 
   cudaGetDeviceCount(&deviceCount);
-  if(deviceCount > 10){
+  if(deviceCount > 1){
       // Each device should do part of the reps
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
