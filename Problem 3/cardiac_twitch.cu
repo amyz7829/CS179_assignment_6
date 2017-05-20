@@ -130,7 +130,8 @@ int main()
       // Each device should do part of the reps
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
-      float h_F_array [deviceCount][iterations] = {0};
+      float h_F_array [deviceCount][iterations];
+      h_F_array = {0};
 
       // Sizes of vectors. For any element at index i in the force vector, that element represents
       // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
