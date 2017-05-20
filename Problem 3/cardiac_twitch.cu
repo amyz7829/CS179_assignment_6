@@ -131,17 +131,17 @@ int main()
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
       float h_F_array [deviceCount][iterations];
+      
+      // Sizes of vectors. For any element at index i in the force vector, that element represents
+      // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
+      size_t sizeF = iterations * sizeof(float);
+      size_t sizeTM = transMatrixSize * sizeof(float);
 
       // For each GPU, run a certain number of simulations and copy memory asynchronously to allow for concurrency
       for(int i = 0; i < deviceCount; i++){
         cudaSetDevice(i);
         float *d_F;
         float *d_TM;
-
-    	  // Sizes of vectors. For any element at index i in the force vector, that element represents
-        // the force fo the cardiac tissue at time i * dt where dt is defined in cardiac_twitch.hpp.
-        size_t sizeF = iterations * sizeof(float);
-        size_t sizeTM = transMatrixSize * sizeof(float);
 
         // Init host vectors
         h_TM = gen_transition_matrix();
@@ -181,7 +181,7 @@ int main()
       cuda_div<<<num_blocks, blockSize>>>(d_F, normalization_constant, iterations);
 
       // Copy array back to host
-      gpuErrchk( cudaMemcpy(h_F, d_F, sizeF, cudaMemcpyDeviceToHost) );
+      gpuErrchk( cudaMemcpy(h_F, d_F_total, sizeF, cudaMemcpyDeviceToHost) );
 
       // Write results out to file for viewing
       write_out(h_F, iterations);
