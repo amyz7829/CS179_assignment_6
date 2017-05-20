@@ -11,7 +11,7 @@
 #include "ta_utilities.hpp"
 
 // Runtime using multiple GPUs : 6309 miliseconds
-// Runtime using single GPU : 2145 miliseconds 
+// Runtime using single GPU : 2145 miliseconds
 
 using namespace std;
 
@@ -134,6 +134,7 @@ int main()
       int reps_per_device = reps / deviceCount;
       //An array that holds all of the H_F values so that we can store all of the ones from each GPU
       float h_F_array [deviceCount][iterations];
+      cudaStream_t streams[deviceCount];
       for(int i = 0; i < deviceCount; i++){
         for(int j = 0; j < iterations; j++){
           h_F_array[i][j] = 0;
@@ -147,6 +148,8 @@ int main()
 
       // For each GPU, run a certain number of simulations and copy memory asynchronously to allow for concurrency
       for(int i = 0; i < deviceCount; i++){
+        cudaStreamCreate(&streams[i]);
+
         cudaSetDevice(i);
         float *d_F;
         float *d_TM;
@@ -159,17 +162,20 @@ int main()
     	  gpuErrchk( cudaMalloc(&d_TM, sizeTM) );
 
         // Copy host vectors to device
-        gpuErrchk( cudaMemcpyAsync( d_TM, h_TM, sizeTM, cudaMemcpyHostToDevice) );
-        gpuErrchk( cudaMemcpyAsync( d_F, h_F_array[i], sizeF, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpyAsync( d_TM, h_TM, sizeTM, cudaMemcpyHostToDevice, streams[i]) );
+        gpuErrchk( cudaMemcpyAsync( d_F, h_F_array[i], sizeF, cudaMemcpyHostToDevice, streams[i]) );
 
         // Execute the simulation
-        mcmc<<<num_blocks, blockSize>>>(d_TM, d_F, iterations, reps_per_device);
+        mcmc<<<num_blocks, blockSize, 0, streams[i]>>>(d_TM, d_F, iterations, reps_per_device);
         //Copy back into the CPU array holding the h_F array results
-        gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF, cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpyAsync(h_F_array[i], d_F, sizeF, cudaMemcpyDeviceToHost, streams[i]));
 
         // Release memory
         cudaFree(d_F);
         cudaFree(d_TM);
+      }
+      for(int i = 0; i < deviceCount; i++){
+        cudaStreamDestroy(streams[i]);
       }
       // Now on the CPU, add up all of the d_Fs and then allocate that and memcpy it over to run cuda_div
       h_F = (float *) malloc(iterations * sizeof(float));
